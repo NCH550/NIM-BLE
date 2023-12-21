@@ -1,0 +1,33 @@
+CFLAGS += -Wall
+
+CC = $(CROSS_COMPILE)gcc
+LD = $(CROSS_COMPILE)ld
+AR = $(CROSS_COMPILE)ar
+
+ifeq ($(SRCTREE),)
+	srctree = ./
+else
+	srctree = $(SRCTREE)
+endif
+CFLAGS += -I$(srctree)
+CFLAGS += -I$(srctree)/lib
+CURDIR = $(shell pwd)
+DEPS = libshared-mainloop.so libbluetooth.so
+LDFLAGS += -L$(CURDIR)/ -pthread
+LDFLAGS += $(foreach var, $(DEPS), -l$(patsubst lib%.so,%,$(var)))
+LDFLAGS += -Wl,-rpath=$(CURDIR)
+
+#sources = client/mgmt.c tools/btmgmt.c
+sources = tools/btmgmt.c
+vobjects = $(filter-out %.h, $(patsubst %.c, %.o, $(sources)))
+robjects := $(foreach var, $(notdir $(vobjects)), $(CURDIR)/$(var))
+target = $(CURDIR)/btmgmt
+
+all: $(target)
+$(vobjects): %.o: %.c
+	$(CC) -c $< -o $(CURDIR)/$(notdir $@) $(CFLAGS)
+$(target): $(vobjects)
+	$(CC) -o $@ $(robjects) $(LDFLAGS)
+.PHONY: clean
+clean:
+	rm -f $(robjects) $(shared_lib)

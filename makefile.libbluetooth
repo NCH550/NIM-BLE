@@ -1,0 +1,31 @@
+CFLAGS += -Wall
+
+CC = $(CROSS_COMPILE)gcc
+LD = $(CROSS_COMPILE)ld
+AR = $(CROSS_COMPILE)ar
+
+ifeq ($(SRCTREE),)
+	srctree = ./
+else
+	srctree = $(SRCTREE)
+endif
+CFLAGS += -I$(srctree)
+CFLAGS += -I$(srctree)/lib
+CURDIR = $(shell pwd)
+
+shared_sources = lib/bluetooth.c lib/hci.c lib/sdp.c lib/uuid.c
+
+vobjects = $(filter-out %.h, $(patsubst %.c, %.o, $(shared_sources)))
+robjects := $(foreach var, $(notdir $(vobjects)), $(CURDIR)/$(var))
+shared_lib = $(CURDIR)/libbluetooth.so
+
+all: $(shared_lib)
+$(vobjects): %.o: %.c
+	$(CC) -c $< -o $(CURDIR)/$(notdir $@) $(CFLAGS) -fPIC
+
+$(shared_lib): $(vobjects)
+	$(CC) -o $@ $(robjects) -shared $(LDFLAGS)
+
+.PHONY: clean
+clean:
+	rm -f $(robjects) $(shared_lib)

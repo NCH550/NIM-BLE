@@ -1,0 +1,45 @@
+CFLAGS = -pthread
+CFLAGS += -Wall
+
+CC = $(CROSS_COMPILE)gcc
+LD = $(CROSS_COMPILE)ld
+AR = $(CROSS_COMPILE)ar
+
+ifeq ($(SRCTREE),)
+	srctree = ./
+else
+	srctree = $(SRCTREE)
+endif
+CFLAGS += -I$(srctree)
+CURDIR = $(shell pwd)
+
+shared_sources = src/shared/io.h src/shared/timeout.h \
+		 src/shared/queue.h src/shared/queue.c \
+		 src/shared/mgmt.h src/shared/mgmt.c \
+		 src/shared/util.h src/shared/util.c \
+		 src/shared/crypto.h src/shared/crypto.c \
+		 src/shared/att-types.h \
+		 src/shared/att.h src/shared/att.c \
+		 src/shared/gatt-helpers.h src/shared/gatt-helpers.c \
+		 src/shared/gatt-client.h src/shared/gatt-client.c \
+		 src/shared/gatt-server.h src/shared/gatt-server.c \
+		 src/shared/gatt-db.h src/shared/gatt-db.c \
+		 src/shared/io-mainloop.c \
+		 src/shared/timeout-mainloop.c \
+		 src/shared/mainloop.c\
+
+vobjects = $(filter-out %.h, $(patsubst %.c, %.o, $(shared_sources)))
+robjects := $(foreach var, $(notdir $(vobjects)), $(CURDIR)/$(var))
+shared_lib = $(PWD)/libshared-mainloop.so
+
+all: $(shared_lib)
+$(vobjects): %.o: %.c
+	$(CC) -c $< -o $(CURDIR)/$(notdir $@) $(CFLAGS) -fPIC
+
+$(shared_lib): $(vobjects)
+	#$(AR) rcs $@ $(robjects)
+	$(CC) -o $@ $(robjects) -shared $(LDFLAGS)
+
+.PHONY: clean
+clean:
+	rm -f $(robjects) $(shared_lib)
