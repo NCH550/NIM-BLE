@@ -1,1 +1,3 @@
 # NIM-BLE
+
+sudo ./btmgmt
